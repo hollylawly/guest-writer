@@ -57,7 +57,7 @@ Some notable features:
 - Can be used on top of existing REST APIs
 - Gives the client side more control
 
-### Prerequisites
+## Prerequisites
 
 Because Flask is a web framework for Python, we need to have Python on our machines. 
 
