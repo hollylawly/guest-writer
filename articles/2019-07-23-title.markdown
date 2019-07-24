@@ -57,22 +57,6 @@ Some notable features:
 - Can be used on top of existing REST APIs
 - Gives the client side more control
 
-## Setting Up our Application
-
-Before we jump into GraphQL, let's setup our Flask backend and then get our database ready for querying.
-
-First things first, let's setup our project directory. 
-
-Create a folder called `flask-quidditch-manager`. Then enter into that folder and we'll create our first file, which will serve as the entry point for our application `app.py`. You can do this in your terminal with the following commands:
-
-```bash
-mkdir flask-quidditch-manager
-cd flask-quidditch-manager
-touch app.py
-```
-
-You can open your preferred code editor now and let's get started with Python.
-
 ### Prerequisites
 
 Because Flask is a web framework for Python, we need to have Python on our machines. 
@@ -92,6 +76,22 @@ You can double check if it's installed with:
 ```bash
 pip --version
 ```
+
+## Setting Up our Application
+
+Before we jump into GraphQL, let's setup our Flask backend and then get our database ready for querying.
+
+First things first, let's setup our project directory. 
+
+Create a folder called `flask-quidditch-manager`. Then enter into that folder and we'll create our first file, which will serve as the entry point for our application `app.py`. You can do this in your terminal with the following commands:
+
+```bash
+mkdir flask-quidditch-manager
+cd flask-quidditch-manager
+touch app.py
+```
+
+You can open your preferred code editor now and let's get started with Python.
 
 ### Creating a Virtual Environment
 
