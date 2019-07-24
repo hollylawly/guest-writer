@@ -12,7 +12,7 @@ related:
 - 2017-11-15-an-example-of-all-possible-elements
 ---
 
-# What We're Going to Build
+## TL;DR:
 
 In this article we're going to demonstrate how we can use **Flask** to build a **GraphQL API** that can create and return **flexible and meaningful data**. First we'll setup our backend using Flask and an SQLite database. Next we'll bring in GraphQL to build an API that will allow us to interact with quidditch teams, players, and games. Finally we'll demonstrate the value this graph-based database modeling can bring to our application by testing out two different **authorization models** to extend permissions to players from the Auth0 dashboard.
 
@@ -20,15 +20,32 @@ All code for this application can be found [on GitHub](https://github.com/hollyl
 
 ## Authorization Models with Auth0
 
-In a typical application, you might have different "tiers" of users. Let's say you have a blog and a database of users who interact with the blog. The first set of users, let's call them subscribers, can only view public blog posts. Next you have the users who manage the blog and are permitted to see the blog's dashboard. Even within that set of users you might have admins and editors, both of which have different permissions. So how would we control who can see what? A popular way to do this is with **role based access control**. We'd simply assign each of those users the role of either subscriber, admin, or editor and then associate certain permissions with that role. 
+In a typical application, you might have different "tiers" of users. Let's say you have a blog and a database of users who interact with the blog. The first set of users, let's call them `subscribers`, can only view public blog posts. Next you have the users who manage the blog and are permitted to see the blog's dashboard. Even within that set of users you might have `admins` and `editors`, both of which have different permissions. So how would we control who can see what? A popular way to do this is with **role based access control**. We'd simply assign each of those users the role of either `subscriber`, `admin`, or `editor` and then associate certain permissions with that role. 
 
-This is a great authorization model for a lot of applications, but sometimes as your application grows, you might find you're creating more and more one-off roles and permissions. Maybe you created a subsection of the blog that only users who have been subscribed for over a year have access to. Should you create a role specifically for that?
+This is a great authorization model for a lot of applications, but sometimes as your application grows, you might find you're creating **more and more one-off roles and permissions**. Maybe you created a subsection of the blog that only users who have been subscribed for over a year have access to. Should you create a role specifically for that?
 
-> In our application, we're going to look at a couple other options for handling these more complex authorization scenarios: Attribute-based Access Control and Relationship-Based Access Control
+> In our application, we're going to use our flexible GraphQL API with Auth0's rules to implement two other options for handling these more complex authorization scenarios: Attribute-based Access Control and Relationship-Based Access Control
+
+### Attribute-based Access Control (ABAC)
+
+Attribute-based access control means we're authorizing our user to have access to something **based on a trait associated with that user**. So in the above example, instead of assigning each user who has been subscribed for over a year a special role for that, we'd just look at the `created_at` field associated with that user and allow or deny access based on that.
+
+### Relationship-based Access Control (ReBAC)
+
+Relationship-based access control is where we allow access to something **based on how that data relates to other data**. In the blog example, we might want to allow a guest author access to the posts section of the dashboard, but **only** let them view and edit posts that they wrote. In this case, we need to **check the relationship** between a post and the user before allowing access. Usually we'll have an `author_id` field on the post that will link back to the `id` field of a user. If that relationship exists, we can grant post editing access for that user. If not, we can simply deny them on the spot.
+
+![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/graph-rebac.png)
+
+So **what does this have to do with a graph structured data**? Modeling our data in a graph-like structure is a great way to bring flexibility to our data and really make **relationships** the top priority. As applications become increasingly complex, it gets much harder to manage roles and permissions. 
+
+Think of an application as massive as Facebook. You allow your profile to be viewed by **your friends** and also **friends of friends**. Some user clicks to view your profile, so now Facebook needs to run a query to search through all of that person's friends and then search all of friends of those friends before it can authorize them to view your profile. That's a lot of work! By modeling these relationships in a graph, we can just select out any point in the graph and "hop" to the next data point to see that relationship. Then we just define [rules](https://auth0.com/docs/rules) that use those relationships or data attributes to make authorization decisions. That's exactly what we're going to do in this article.
+
+![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/fb-access-example.png)
+
 
 ## Why Flask and GraphQL
 
-We're going to be using Flask as our application backend. [Flask](https://flask.palletsprojects.com/en/1.0.x/) is a simple and flexible web framework for [Python](https://docs.python.org/3/) that provides us with tools that will make our application development much faster and easier. Flask is super lightweight, so it's a perfect choice for a simple but extensible backend. 
+We're going to be using Flask as our application backend. [Flask](https://palletsprojects.com/p/flask/) is a simple and flexible web framework for [Python](https://www.python.org/) that provides us with tools that will make our application development much faster and easier. Flask is super lightweight, so it's a perfect choice for a simple but extensible backend. 
 
 We'll also be using [GraphQL](https://graphql.org/) to build a simple API. GraphQL is a query language that allows us to create APIs or work with existing APIs. It was created by Facebook and publicly released in 2015. Since then it's been gaining a ton of traction from both individual developers and also big companies such as Airbnb and Shopify.
 
@@ -40,7 +57,7 @@ Some notable features:
 - Can be used on top of existing REST APIs
 - Gives the client side more control
 
-# Setting Up our Application
+## Setting Up our Application
 
 Before we jump into GraphQL, let's setup our Flask backend and then get our database ready for querying.
 
@@ -54,9 +71,9 @@ cd flask-quidditch-manager
 touch app.py
 ```
 
-You can open your preferred code editor now and checkout our barebones application. Let's get started with Python.
+You can open your preferred code editor now and let's get started with Python.
 
-## Installing Python and pip
+### Installing Python and pip
 
 Because Flask is a web framework for Python, we're going to need to install Python. 
 
@@ -64,7 +81,7 @@ You can download the latest version for your system from the [Python website](ht
 
 Next we're going to be using **Pip**, which is a package manager for Python similar to npm. If you downloaded a recent version of Python 3 (3.4 or higher), pip should have been installed with it. If not, you can install it [here](https://pip.pypa.io/en/stable/installing/).
 
-## Creating a Virtual Environment
+### Creating a Virtual Environment
 
 Whenever you're creating a Python project that requires external packages, it's a good idea to create a **virtual environment**. This will keep all of our dependencies isolated to that specific project. If we just installed every package globally on our system, we could eventually run into problems if we had a scenario where two different projects required different versions of the same package. So let's setup our virtual environment now. If you're on Python 3, the module `venv` should already be installed on your system. If not, you can find installation instructions [here](https://flask.palletsprojects.com/en/1.1.x/installation/#install-install-virtualenv).
 
@@ -106,7 +123,7 @@ Whenever you're ready to exit the environment, just run `deactivate` in your ter
 
 *Note* - If you're using VSCode to run your commands, you may need to add `"terminal.integrated.shellArgs.windows": ["-ExecutionPolicy", "Bypass"]` to your `settings.json` file in order to run the activate script. 
 
-## Setting up Flask
+### Setting up Flask
 
 Now that we have a virtual environment to store our dependencies, we're finally ready to setup Flask! In your terminal run:
 
@@ -146,11 +163,11 @@ python app.py
 
 Now if you go to `localhost:5000` in your browser, you should be greeted with **Hello World**.
 
-# Setting up our Database
+## Setting up our Database
 
 Next up let's create our database! We're going to have three tables: `players`, `teams`, and `games`, so let's see how we can create those. 
 
-## SQLite and SQLAlchemy
+### SQLite and SQLAlchemy
 
 We'll be using [SQLite](https://www.sqlite.org/index.html) for our application's database. It's a lightweight database that's great for small applications such as our Quidditch Manager. While Python comes with built-in support for SQLite, it can be a bit tedious to work with if you need to write a lot of SQL queries. 
 
@@ -180,7 +197,7 @@ Base.query = db_session.query_property()
 
 First we need to import `create_engine` from the sqlalchemy package. Next we're going to create our database file using `create_engine`. This is the starting point for our SQLite database. Then we create a session so we can interact with the database. Next we construct a base class `Base` for our class definitions (we'll use this later when we're creating our models). Finally Base.query is going to be required for making our queries later on.
 
-## Creating our Models
+### Creating our Models
 
 Next up we're going to create our models. A model is a class that represents the structure of our data. Each model will **map to a table in our database** and include information such as the field name, type, if it's nullable, and more. We can also define any relationships between our tables in our model classes. 
 
@@ -197,7 +214,6 @@ from sqlalchemy import Column, ForeignKey, Integer, String
 from sqlalchemy.orm import backref, relationship
 
 # Create our classes, one for each table
-
 
 class Team(Base):
     __tablename__ = 'teams'
@@ -239,7 +255,7 @@ class Game(Base):
 
 Here's the basic flow of what we're doing:
 
-1. Importing the base class, `Base`, for filling out our tablese
+1. Importing the base class, `Base`, for filling out our tables
 2. Define our three classes: `Team`, `Player`, and `Game` (note that they're all singular)
 3. Set the table name for each class
 4. Create variables that represent each column of each table
@@ -249,37 +265,31 @@ Here's the basic flow of what we're doing:
 
 These classes are basically the lifeblood of our database. When we create our database in the next step, it's going to setup the tables and columns exactly how we told it to in this file. 
 
-## Relationships
+Just a quick sidenote, you may have noticed in the `teams` table we have a `players` column that's using `db.relationship()`. This is how we create a **one to many relationship** using SQLAlchemy. All we're saying is that one team can have many players, but a player can only belong to one team. These relationships are important to define now so that we can model them in our graph later. You can learn more about creating relationships in SQLAlchemy [in this article](https://auth0.com/blog/sqlalchemy-orm-tutorial-for-python-developers/).  
 
-Just a quick sidenote, you may have noticed in the `teams` table we have a `players` column that's using `db.relationship()`. This is how we create a **one to many relationship** using SQLAlchemy. All we're saying is that one team can have many players, but a player can only belong to one team.  We're making a sort of pseudo column called `team_name` in the `players` table that maps to the Player class and references the `team` table. This will become a little more clear once we start working with the data, so hang tight.
-
-Another thing to notice here is the `db.ForeignKey()` attribute on our Player and Game classes. In the `games` table for example, each game will have a winner and a loser team. We'll be tying these back to the `teams` table by just specifying the `id` of the respective winner and loser. 
-
-# Creating and Seeding our Database
+## Creating and Seeding our Database
 
 Now that we've done all that setup, we can finally create our database! In your terminal, type `python` to start a Python shell. We're first going to import the `db` object from our app and our classes from `model.py`. Then we'll just run SQLAlchemy's `create_all()` method to create the database. 
 
 ```bash
 python
-from database import Base, engine
+from database import Base, engine, db_session
 from models import Team, Player, Game
 Base.metadata.create_all(bind=engine)
 
 ```
 
-You should now see a `quidditch.db` file in the root of your project folder. To exit Python, just press `ctrl` + `Z` and hit `enter`.
+You should now see a `quidditch.db` file in the root of your project folder.
 
 Our database structure now looks like this:
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/table-structure.png)
 
-The final step before we move onto GraphQL is populating our database with data. We'll walk through the commands you can use in the Python shell to add data to the tables, but the data itself is pretty trivial and time-consuming to enter by hand, so head to the [GitHub repo](https://github.com/hollylawly/flask-graphql-quidditch) to get all the data for this example.
+The final step before we move onto GraphQL is populating our database with data. We'll walk through the commands you can use in the Python shell to add data to the tables, but the data itself is pretty trivial and time-consuming to enter by hand, so head to the `seeder.txt` file in the [GitHub repo](https://github.com/hollylawly/graphql-flask-quidditch-manager/blob/master/seeder.txt) to get all the data for this example.
 
 Let's manually enter Gryffindor into the teams table. Go to your terminal and open the Python shell by typing `python` and then enter the following:
 
 ```bash
-from models import Team, Player, Game
-from database import Base
 team1 = Team(name='Gryffindor', rank=1)
 db_session.add(team1)
 db_session.commit()
@@ -298,22 +308,25 @@ db_session.commit()
 
 You may have noticed that for the last attribute we called it `team_name` when the column is called `team_id`. Because we've already defined a relationship between the players table and teams table, we can actually just use that backref we created earlier and assign it to the `team1` variable we just created for the Gryffindor team. That way we don't have to go through the trouble of looking up what id Gryffindor was assigned. Pretty neat!
 
-# Getting Started with GraphQL
+To exit Python, just press `ctrl` + `Z` and hit `enter`.
+
+## Getting Started with GraphQL
 
 Alright now that we've setup Flask and have our database ready to go, let's finally play with GraphQL!
 
-## Integrating GraphQL with Graphene
+### Integrating GraphQL with Graphene
 
 First we need to install a few dependencies so we can bring GraphQL into our application.
 
 ```bash
 pip install flask-graphql graphene graphene-sqlalchemy
 ```
-**flask-graphql** - 
+
+**flask-graphql** - [Flask Package](https://github.com/graphql-python/flask-graphql) that will allow us to use GraphiQL IDE in the browser
 **graphene** - [Python library](https://graphene-python.org/) for building GraphQL APIs
 **graphene-sqlalchemy** - [Graphene package](http://docs.graphene-python.org/projects/sqlalchemy/en/latest/tutorial/) that works with SQLAlchemy to simplify working with our models
 
-## Creating our Schemas
+### Creating our Schemas
 
 Next let's create our schema. The schema is going to represent the graph-like **structure of our data** so that GraphQL can know how to map it. 
 
@@ -424,21 +437,21 @@ schema = graphene.Schema(query=Query)
 
 So what's going on here? We're adding some more complex queries that can't just rely on the models above to display their data. For example, we're expecting GraphQL to get all games a team has played, but we haven't told it how to do that. We have to create **resolvers** that will work with our SQLite database and get that information to be added to the graph. 
 
-### get_player
+#### get_player
 
 This will allow us to request any **single** player by name. We're passing in the `PlayerObject`, so we'll have access to all attributes for that player. 
 
 Now we just need to setup a function to **resolve** that player, meaning the actually query we do on the database to get them. We're just searching the `player` table until we find a player whose `name` is equal to the one we passed in.
 
-### get_game
+#### get_game
 
 This is similar to get player, except here we're getting a single game by `id`.
 
-### get_team_games
+#### get_team_games
 
 Here we're requesting data about all games played by a certain team. We're going to allow the client to pass in a team's `id` and from there they can request any information they'd like about games that team has either won or lost. When we resolve that query, we're just searching the database for any games where the team's id matches the `winner_id` or `loser_id`. Also note back in the `get_team_games` variable, we need to specify that we want a `List` of games instead of just one.
 
-## get_position
+#### get_position
 
 Our final query will allow the client to specify a player's `position` and then we'll return back all player's who match that position.
 
@@ -476,7 +489,19 @@ Make sure you still have your app running (`python app.py`) and head on over to 
 
 Let's test out one of our initial queries now.
 
-**Get all players by name**
+**Get all players with name**
+
+```js
+{
+  allPlayers {
+    edges {
+      node {
+        name
+      }
+    }
+  }
+}
+```
 
 Think back to that graph of our data that we had above. To get all players, first we need to walk along all the lines in the graph (edges) that point to each player (nodes). Once we hit a node, we have access to all attributes of that node that were defined in our schema, which is this case is everything. Note that by convention, when we're making GraphQL queries we have to use camel case.  
 
@@ -488,11 +513,41 @@ Let's look at another example to demonstrate this.
 
 **Get all players with their name, team name, and position**
 
+```js
+{
+  allPlayers {
+    edges {
+      node {
+        name
+        position
+        teamName {
+          name
+          rank
+        }
+      }
+    }
+  }
+}
+```
+
 This time we're going to request all players with their name, position, and team name. We're able to access `teamName` because back when we setup our models, we defined a relationship between `teams` and `players` where we created that pseudo-column on the `players` table. This is how we can use it now! Instead of just getting back an `id`, we can request the name directly.
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/graphql-players-query.png)
 
 **Get a single player with their position, team name, and team rank**
+
+```js
+query {
+  getPlayer(name: "Harry Potter") {
+    name
+    position
+    teamName {
+      name
+      rank
+    }
+  }
+}
+```
 
 GraphQL also lets you pass in arguments. This time we just want a single player by name and we also want to get their position, team name, and team rank.
 
@@ -500,29 +555,52 @@ GraphQL also lets you pass in arguments. This time we just want a single player 
 
 **Get all players whose position is "Seeker"**
 
+```js
+query {
+  getPosition(position: "Seeker") {
+    name
+    teamName {
+      name
+    }
+  }
+}
+```
+
 For our final example, let's get all players, but we only want those who are Seekers. 
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-position-query.png)
 
 **Get a game and the child game associated with it**
 
+```js
+query {
+  getGame(id: 8) {
+    level
+    winnerId
+    loserId
+    child {
+      id
+      level
+      winnerId
+      loserId
+    }
+  }
+}
+```
+
 This is a great use case for graph-structured data. In this scenario we basically have a sports bracket. We're asking for attributes of a specific game such as who won and who lost. We can also hop over to the next game node and see what the child (or results of this game) was and then get information about that game as well.
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-game-single-query.png)
 
-# Creating Auth0 Authorization Rules
+## Creating Auth0 Authorization Rules
 
-Now that we've created a GraphQL API, let's check out how we can pair our data with some authorization models that perfectly compliment GraphQL's flexibility.
+As mentioned at the beginning of this article, there are a few different ways we can authorize a user to have certain permissions in an application. The most widely used one is **role based access control**, which is where we have a user and we assign it roles. The roles then dictate the permissions that user has. This structure works fine for small simple applications, but a lot of larger applications make authorization decisions that rely heavily on either attributes of a user or the relationships a user has to data.
 
-## Comparison of Common Authorization Models
+Now that we've created our GraphQL API, we can use that flexible data to implement two different authorization models: **Attribute based Access Control** and **Relationship Based Access Control**.
 
-As mentioned at the beginning of this article, there are a few different ways we can authorize a user to have certain permissions in an application. The most widely used one is **role based access control**, which is where we have a user and we assign it roles. The roles then dictate the permissions that user has. This structure works fine for small simple applications, but a lot of larger applications make authorization decisions that rely heavily on either attributes of a user or the relationships a user has to data. So how do we do that *without* creating roles? Let's find out.
+### Creating an ABAC Rule
 
-In this example we're going to focus on two different authorization models: **Attribute based Access Control** and **Relationship Based Access Control**.
-
-## Creating an ABAC Rule
-
-Attribute based access control means we're authorizing our user to have access to something **based on a trait associated with that user**. 
+Attribute based access control means we're authorizing our user to access something **based on an attribute of that user**. 
 
 In our quidditch example, let's say our application has special forums where all players that play a certain position can chat with each other. For example, every player with `position` equal to "Seeker" will be able to access the Seeker's forum and only the Seeker's forum. It doesn't matter what team they're on, as long as they all play the same position.
 
@@ -583,20 +661,20 @@ Next we just need to wait for this response and when it comes back, check if tha
 
 Let's test that this works. Click "Try this rule" and we can run the rule with a mock user.
 
-### Our user before logging in
+#### Our user before logging in
 
 This is what the **user object** looks like before logging in. We have our user's basic information like `id` and `name`. Then in the next image we can see the user's **context object**, which holds information about the authentication transaction. Notice that the `accessToken` scope is currently empty. Click "Try" so we can run this rule against this user.
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-user-before.png)
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-context-before.png)
 
-### After Logging In
+#### After Logging In
 
 Now our user is returned and if you look at the context object, we can see a `seeker_chat` permission has been added to the access token's scope.
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-context-after.png)
 
-### Denying a User
+#### Denying a User
 
 Just for good measure, let's make sure that we're only extending this permission to player's with the Seeker position. Change the user's name to "Oliver Wood", who is a Captain, and run the rule.
 
@@ -605,7 +683,7 @@ Just for good measure, let's make sure that we're only extending this permission
 
 The user is denied, just as we were expecting.
 
-## Creating a ReBAC Rule
+### Creating a ReBAC Rule
 
 Next up, let's create our relationship based rule. 
 
@@ -660,19 +738,19 @@ function (user, context, callback) {
 }
 ```
 
-### Before Logging In
+#### Before Logging In
 
 Zacharias Smith is requesting access to the game data. He's on team Ravenclaw (`team_id` of 4), which matches the `winnerId` of the game. We expect him to gain access and have the `gameInfo` object added to the user context.
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/game-winner-user.png)
 
-### After Logging In
+#### After Logging In
 
 Zacharias Smith is in!
 
 ![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-team-games-query-children.png)
 
-### Denying a User
+#### Denying a User
 
 Again, let's check the case that a user who *shouldn't* have access tries tries to view the game. Harry Potter, who has `team_id` 1, should not be able to access this game.
 
@@ -682,6 +760,6 @@ Again, let's check the case that a user who *shouldn't* have access tries tries 
 
 Just as we were expecting, Harry Potter is denied access.
 
-# Wrap Up
+## Wrap Up
 
 We've covered a lot in this post and even though it takes some work to setup, I hope you can see the value of integrating GraphQL into your application. It gives the client the power to request exactly what they want and it also can help expand the capabilities of your application's authorization flow. We can simplify this even further by [using rules](https://auth0.com/docs/rules) in Auth0's dashboard to extend permissions or assign roles based on certain attributes or relationships. Thanks for following along and be sure to leave any questions below!
