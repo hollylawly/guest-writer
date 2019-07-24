@@ -73,13 +73,25 @@ touch app.py
 
 You can open your preferred code editor now and let's get started with Python.
 
-### Installing Python and pip
+### Prerequisites
 
-Because Flask is a web framework for Python, we're going to need to install Python. 
+Because Flask is a web framework for Python, we need to have Python on our machines. 
 
-You can download the latest version for your system from the [Python website](https://www.python.org/downloads/). For this tutorial, we'll be using Python 3. 
+You can check if it's installed on your system by opening your terminal and running:
 
-Next we're going to be using **Pip**, which is a package manager for Python similar to npm. If you downloaded a recent version of Python 3 (3.4 or higher), pip should have been installed with it. If not, you can install it [here](https://pip.pypa.io/en/stable/installing/).
+```bash
+python --version
+```
+
+If a version is not returned, you're going to need to download and install the latest version from the [Python website](https://www.python.org/downloads/). For this tutorial, we'll be using Python 3.
+
+Next we're going to be using **Pip**, which is a package manager for Python, similar to npm. If you downloaded a recent version of Python 3 (3.4 or higher), pip should have been installed with it. If not, you can install it [here](https://pip.pypa.io/en/stable/installing/).
+
+You can double check if it's installed with:
+
+```bash
+pip --version
+```
 
 ### Creating a Virtual Environment
 
@@ -112,7 +124,7 @@ env\Scripts\activate
 If you're on Mac or Linux use:
 
 ```bash
-env/bin/activate
+. env/bin/activate
 ```
 
 Your terminal should now look similar to this:
@@ -131,7 +143,7 @@ Now that we have a virtual environment to store our dependencies, we're finally 
 pip install flask
 ```
 
-You should now see a flask folder inside `env/Lib/site-packages`. 
+This creates a `site-packages` folder nested inside your `env` folder. 
 
 Now let's setup a basic skeleton app. Open up your empty `app.py` file and paste in the following:
 
