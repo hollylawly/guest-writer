@@ -99,7 +99,7 @@ touch app.py
 
 You can open your preferred code editor now and let's get started with Python.
 
-### Creating a Virtual Environment
+### Creating a virtual environment
 
 Whenever you're creating a Python project that requires external packages, it's a good idea to create a **virtual environment**. This will keep all of our dependencies isolated to that specific project. If we just installed every package globally on our system, we could eventually run into problems if we had a scenario where two different projects required different versions of the same package. So let's setup our virtual environment now. If you're on Python 3, the module `venv` should already be installed on your system. If not, you can find installation instructions [here](https://flask.palletsprojects.com/en/1.1.x/installation/#install-install-virtualenv).
 
@@ -213,7 +213,7 @@ Base.query = db_session.query_property()
 
 First we need to import `create_engine` from the sqlalchemy package. Next we're going to create our database file using `create_engine`. This is the starting point for our SQLite database. Then we create a session so we can interact with the database. Next we construct a base class `Base` for our class definitions (we'll use this later when we're creating our models). Finally Base.query is going to be required for making our queries later on.
 
-### Creating our Models
+### Creating our models
 
 Next up we're going to create our models. A model is a class that represents the structure of our data. Each model will **map to a table in our database** and include information such as the field name, type, if it's nullable, and more. We can also define any relationships between our tables in our model classes. 
 
@@ -343,7 +343,7 @@ pip install flask-graphql graphene graphene-sqlalchemy
 **graphene** - [Python library](https://graphene-python.org/) for building GraphQL APIs
 **graphene-sqlalchemy** - [Graphene package](http://docs.graphene-python.org/projects/sqlalchemy/en/latest/tutorial/) that works with SQLAlchemy to simplify working with our models
 
-### Creating our Schemas
+### Creating our schemas
 
 Next let's create our schema. The schema is going to represent the graph-like **structure of our data** so that GraphQL can know how to map it. 
 
@@ -615,7 +615,7 @@ As mentioned at the beginning of this article, there are a few different ways we
 
 Now that we've created our GraphQL API, we can use that flexible data to implement two different authorization models: **Attribute-based Access Control** and **Graph-Based Access Control**.
 
-### Creating an ABAC Rule
+### Creating an ABAC rule
 
 Attribute based access control means we're authorizing our user to access something **based on an attribute of that user, resources, or the request at hand.**. 
 
@@ -683,17 +683,17 @@ This is what the **user object** looks like before logging in. We have our user'
 ![](images/seeker-chat-user-before.png)
 ![](images/seeker-chat-context-before.png)
 
-#### After Logging In
+#### After logging in
 
 Now our user is returned and if you look at the context object, we can see a `year_2_chat` permission has been added to the access token's scope.
 
 ![](images/seeker-chat-context-after.png)
 
-#### Denying a User
+#### Denying a user
 
 This is a quick way to grant permissions dynamically. We can setup our app so that in order to access a certain year's chatroom, you must have the correct permission for that year. So if a player in her 3rd year tries to access Year 2 Chat, she will be denied. 
 
-### Creating a GBAC Rule
+### Creating a GBAC rule
 
 Next up, let's create our graph based rule. 
 
@@ -752,14 +752,14 @@ function (user, context, callback) {
 }
 ```
 
-#### Before/During Login
+#### Before/during login
 
 Harry Potter clicks the login button to get into his dashboard. The rule will run and modify the context object based on those relationships. Just for demonstration purposes to verify it's working, we'll add his list of viewable players to the context object. We could also add specific permissions based on this information as well.
 
 ![](images/player-teams-user-before.png)
 ![](images/player-teams-context-before.png)
 
-#### After Logging In
+#### After logging in
 
 Harry Potter is in and now has access to these teammates:
 
