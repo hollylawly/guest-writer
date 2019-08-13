@@ -34,13 +34,13 @@ Attribute-based access control means we're authorizing our user to have access t
 
 Relationship-based access control is where we allow access to something **based on how that data relates to other data**. In the blog example, we might want to allow a guest author access to the posts section of the dashboard, but **only** let them view and edit posts that they wrote. In this case, we need to **check the relationship** between a post and the user before allowing access. Usually we'll have an `author_id` field on the post that will link back to the `id` field of a user. If that relationship exists, we can grant post editing access for that user. If not, we can simply deny them on the spot.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/graph-rebac.png)
+![](images/graph-rebac.png)
 
 So **what does this have to do with a graph structured data**? Modeling our data in a graph-like structure is a great way to bring flexibility to our data and really make **relationships** the top priority. As applications become increasingly complex, it gets much harder to manage roles and permissions. 
 
 Think of an application as massive as Facebook. You allow your profile to be viewed by **your friends** and also **friends of friends**. Some user clicks to view your profile, so now Facebook needs to run a query to search through all of that person's friends and then search all of friends of those friends before it can authorize them to view your profile. That's a lot of work! By modeling these relationships in a graph, we can just select out any point in the graph and "hop" to the next data point to see that relationship. Then we just define [rules](https://auth0.com/docs/rules) that use those relationships or data attributes to make authorization decisions. That's exactly what we're going to do in this article.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/fb-access-example.png)
+![](images/fb-access-example.png)
 
 
 ## Why Flask and GraphQL
@@ -111,9 +111,9 @@ py -3 -m venv env
 
 This will create a folder in your project folder called `env` where we can store all of our dependencies.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/env-setup.png)
+![](images/env-setup.png)
 
-Next we just need to activate it. All you have to do is run the activate script that's inside the folder we created. In this case it's located at `env/Scripts/activate`. `env` will be replaced by whatever you named the environment.  
+Next we just need to activate it. All you have to do is run the activate script that's inside the folder we created. In this case it's located at `env/Scripts/activate`. The `env` part of the path will be replaced by whatever you named the environment.  
 
 If you're on **Windows** use:
 
@@ -129,11 +129,9 @@ If you're on Mac or Linux use:
 
 Your terminal should now look similar to this:
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/env.png)
+![](images/env.png)
 
 Whenever you're ready to exit the environment, just run `deactivate` in your terminal.
-
-*Note* - If you're using VSCode to run your commands, you may need to add `"terminal.integrated.shellArgs.windows": ["-ExecutionPolicy", "Bypass"]` to your `settings.json` file in order to run the activate script. 
 
 ### Setting up Flask
 
@@ -233,7 +231,7 @@ class Team(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50))
     rank = Column(Integer, nullable=False)
-    players = relationship('Player', backref='team_name', lazy=True)
+    players = relationship('Player', backref='on_team', lazy=True)
 
     def __repr__(self):
         return '<Team %r>' % self.name
@@ -244,6 +242,7 @@ class Player(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), nullable=False)
     position = Column(String(50), nullable=False)
+    year = Column(Integer, nullable=False)
     team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
 
     def __repr__(self):
@@ -295,7 +294,7 @@ You should now see a `quidditch.db` file in the root of your project folder.
 
 Our database structure now looks like this:
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/table-structure.png)
+![](images/table-structure.png)
 
 The final step before we move onto GraphQL is populating our database with data. We'll walk through the commands you can use in the Python shell to add data to the tables, but the data itself is pretty trivial and time-consuming to enter by hand, so head to the `seeder.txt` file in the [GitHub repo](https://github.com/hollylawly/graphql-flask-quidditch-manager/blob/master/seeder.txt) to get all the data for this example.
 
@@ -313,12 +312,12 @@ This is the process we'll use to add any new row into a table. We're just callin
 Let's add our first player as well. We've already imported the classes, so we don't need to do it again.
 
 ```bash
-player1 = Player(name='Harry Potter', position='Seeker', team_name=team1)
+player1 = Player(name='Harry Potter', year=1, position='Seeker', on_team=team1)
 db_session.add(player1)
 db_session.commit()
 ```
 
-You may have noticed that for the last attribute we called it `team_name` when the column is called `team_id`. Because we've already defined a relationship between the players table and teams table, we can actually just use that backref we created earlier and assign it to the `team1` variable we just created for the Gryffindor team. That way we don't have to go through the trouble of looking up what id Gryffindor was assigned. Pretty neat!
+You may have noticed that for the last attribute we called it `on_team` when the column is called `team_id`. Because we've already defined a relationship between the players table and teams table, we can actually just use that backref we created earlier and assign it to the `team1` variable we just created for the Gryffindor team. That way we don't have to go through the trouble of looking up what id Gryffindor was assigned. Pretty neat!
 
 To exit Python, just press `ctrl` + `Z` and hit `enter`.
 
@@ -350,7 +349,7 @@ Instead of the traditional tabular structure of data, imagine we have a **graph*
 
 Each node will also have attributes associated with it. In this case we can see some of the `position` attributes such as Captain and Seeker, represented as ovals. 
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/graph-structure.png)
+![](images/graph-structure.png)
 
 If setup properly, GraphQL gives us the ability to **select any tree** from that graph. If we want to grab all players who are captains we can do that. If we want to grab all of the game data for a particular team, we can do that as well. GraphQL makes our data super flexible and gives the client more control over the type of data and structure of data that's returned to it.
 
@@ -517,7 +516,7 @@ Let's test out one of our initial queries now.
 
 Think back to that graph of our data that we had above. To get all players, first we need to walk along all the lines in the graph (edges) that point to each player (nodes). Once we hit a node, we have access to all attributes of that node that were defined in our schema, which is this case is everything. Note that by convention, when we're making GraphQL queries we have to use camel case.  
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/all-players-basic-query.png)
+![](images/all-players-basic-query.png)
 
 > In a normal REST API, if you did a query to get a user it might return a lot of unnecessary attributes about the user. With GraphQL, we can request exactly what we **want**.
 
@@ -532,7 +531,7 @@ Let's look at another example to demonstrate this.
       node {
         name
         position
-        teamName {
+        onTeam {
           name
           rank
         }
@@ -542,9 +541,9 @@ Let's look at another example to demonstrate this.
 }
 ```
 
-This time we're going to request all players with their name, position, and team name. We're able to access `teamName` because back when we setup our models, we defined a relationship between `teams` and `players` where we created that pseudo-column on the `players` table. This is how we can use it now! Instead of just getting back an `id`, we can request the name directly.
+This time we're going to request all players with their name, position, and team name. We're able to access `onTeam` because back when we setup our models, we defined a relationship between `teams` and `players` where we created that pseudo-column on the `players` table. This is how we can use it now! Instead of just getting back an `id`, we can request the name directly.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/graphql-players-query.png)
+![](images/graphql-players-query.png)
 
 **Get a single player with their position, team name, and team rank**
 
@@ -553,7 +552,7 @@ query {
   getPlayer(name: "Harry Potter") {
     name
     position
-    teamName {
+    onTeam {
       name
       rank
     }
@@ -563,7 +562,7 @@ query {
 
 GraphQL also lets you pass in arguments. This time we just want a single player by name and we also want to get their position, team name, and team rank.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-player-query.png)
+![](images/get-player-query.png)
 
 **Get all players whose position is "Seeker"**
 
@@ -571,7 +570,7 @@ GraphQL also lets you pass in arguments. This time we just want a single player 
 query {
   getPosition(position: "Seeker") {
     name
-    teamName {
+    onTeam {
       name
     }
   }
@@ -580,7 +579,7 @@ query {
 
 For our final example, let's get all players, but we only want those who are Seekers. 
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-position-query.png)
+![](images/get-position-query.png)
 
 **Get a game and the child game associated with it**
 
@@ -602,7 +601,7 @@ query {
 
 This is a great use case for graph-structured data. In this scenario we basically have a sports bracket. We're asking for attributes of a specific game such as who won and who lost. We can also hop over to the next game node and see what the child (or results of this game) was and then get information about that game as well.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-game-single-query.png)
+![](images/get-game-single-query.png)
 
 ## Creating Auth0 Authorization Rules
 
@@ -612,25 +611,24 @@ Now that we've created our GraphQL API, we can use that flexible data to impleme
 
 ### Creating an ABAC Rule
 
-Attribute based access control means we're authorizing our user to access something **based on an attribute of that user**. 
+Attribute based access control means we're authorizing our user to access something **based on an attribute of that user, resources, or the request at hand.**. 
 
-In our quidditch example, let's say our application has special forums where all players that play a certain position can chat with each other. For example, every player with `position` equal to "Seeker" will be able to access the Seeker's forum and only the Seeker's forum. It doesn't matter what team they're on, as long as they all play the same position.
+In our quidditch example, let's say our application has special forums where all players with certain attributes can chat with each other. For example, every player who is in the same `year` at Hogwarts will be able to access the chat for their year. It doesn't matter what team they're on, as long as they have the same value for `year`.
 
 We can actually create this rule pretty easily through the Auth0 dashboard. Let's see it in action.
 
 First head on over to [Auth0.com](https://auth0.com) and click "Sign up" to create a free account. You'll be prompted to create a tenant domain or just accept the auto-generated one. Fill out your account information and then you'll enter into the dashboard.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/auth0-dash.png)
+![](images/auth0-dash.png)
 
 Click on "Rules" on the left-hand side. 
 
 [Auth0 rules](https://auth0.com/docs/rules) are special functions you can create that will run whenever a user logs into your application. They allow us to add information to a user's profile, ban specific users based on certain attributes, extend permissions to users, and more.
 
-Press "Create Rule" and let's make a rule that will extend a "seeker_chat" permission to all players with `position` Seeker.
+Press "Create Rule" and let's make a rule that will extend a chat permission to a user based on what year they're in at Hogwarts.
 
 ```js
-// See if the user is authorized to enter the seeker chat
-// If so, give them chat permissions
+// Give the user permissions to access the chat for their year
 
 function (user, context, callback) {
   
@@ -638,7 +636,7 @@ function (user, context, callback) {
   const name = user.name;
   
   axios({
-    url: 'https://e709d1d2.ngrok.io/graphql',
+    url: 'https://4ee74187.ngrok.io/graphql',
     method: 'post',
     data: {
       query: `
@@ -646,131 +644,120 @@ function (user, context, callback) {
           getPlayer(name: "${name}") {
             name
             position
-            teamName {
-            name
-            }
+            year
           }
         }
         `
     }
    }).then((result) => {      
-      if (result.data.data.getPlayer.position === 'Seeker') {
+      if (result.data.data.getPlayer.year) {
+        let playerYear = result.data.data.getPlayer.year;
         context.accessToken.scope = context.accessToken.scope || [];
-        context.accessToken.scope.push(['seeker_chat']);
+        context.accessToken.scope.push([`year_${playerYear}_chat`]);
         return callback(null, user, context);
       } else
         return callback(new UnauthorizedError('Access denied.'));
     }).catch(err => {
       return callback(err);
-    });  
+    });
 }
 
 ```
 
 First we're going to require **axios** so we can make the call to our GraphQL API. We have access to the user who's trying to access the chat through the `user` variable. Let's just grab the name from the user and pass that into our `getPlayer` query. Of course in the real world we wouldn't use `name` since that isn't unique, but this example is just for demonstration.
 
-Next we just need to wait for this response and when it comes back, check if that user's `position` is "Seeker". If so, we push the `seeker_chat` permission onto their access token's scope.
+Next we just need to wait for this response and when it comes back, check if that user has a year set. If so, we push the permission for access to that year's chat onto their access token's scope.
 
 Let's test that this works. Click "Try this rule" and we can run the rule with a mock user.
 
-#### Our user before logging in
+#### Our user during login
 
 This is what the **user object** looks like before logging in. We have our user's basic information like `id` and `name`. Then in the next image we can see the user's **context object**, which holds information about the authentication transaction. Notice that the `accessToken` scope is currently empty. Click "Try" so we can run this rule against this user.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-user-before.png)
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-context-before.png)
+![](images/seeker-chat-user-before.png)
+![](images/seeker-chat-context-before.png)
 
 #### After Logging In
 
-Now our user is returned and if you look at the context object, we can see a `seeker_chat` permission has been added to the access token's scope.
+Now our user is returned and if you look at the context object, we can see a `year_2_chat` permission has been added to the access token's scope.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-context-after.png)
+![](images/seeker-chat-context-after.png)
 
 #### Denying a User
 
-Just for good measure, let's make sure that we're only extending this permission to player's with the Seeker position. Change the user's name to "Oliver Wood", who is a Captain, and run the rule.
-
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-user-denied.png)
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/seeker-chat-denied-message.png)
-
-The user is denied, just as we were expecting.
+This is a quick way to grant permissions dynamically. We can setup our app so that in order to access a certain year's chatroom, you must have the correct permission for that year. So if a player in her 3rd year tries to access Year 2 Chat, she will be denied. 
 
 ### Creating a ReBAC Rule
 
 Next up, let's create our relationship based rule. 
 
-For this scenario, let's say a user is trying to gain access to information about a particular game. And let's just imagine that the game results are supposed to be a secret to everyone **except the users on the winning team of that game**. 
+For this scenario, let's imagine that we need to restrict view access of player's profiles based on what team they're on. 
 
-We need to create a rule that steps in front of the user when they try to access the game data and checks if they were the winner of that game. We'll run the `getGame` query and check if the `winnerId` matches the `team_id` of the user trying to access it. This is the query and the data that we're trying to protect:
+**A player can see the profile of every other player on their team, but no one else.**
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-game-single-query.png)
+We want to create a rule that jumps in after a user logs in and determines what players the user will be able to see. 
+
+First we'll run the `getPlayer` query for the user that's logging in. In that query, we'll use the `onTeam` relationship to pull what team the user is on. From there we can use the `players` relationship to grab all of the players that are on that team. This is the query and the data that we're going to use to determine what the user can access:
+
+![](images/get-player-teammates.png)
 
 Create a new rule with the following:
 
 ```js
 function (user, context, callback) {
-  
   const axios = require('axios');
-  const gameId = 8;
   
-  // If no user, deny them access
   if (! user.id)
     return callback(new UnauthorizedError('Access denied. Please login.'));
   
   axios({
-    url: 'https://e709d1d2.ngrok.io/graphql',
+    url: 'https://4ee74187.ngrok.io/graphql',
     method: 'post',
     data: {
       query: `
         {
-          getGame(id: ${gameId}) {
-            level
-            winnerId
-            loserId
-            child {
-              level
-              winnerId
+          getPlayer(name: "${user.name}") {
+            name
+            onTeam {
+              name
+              players {
+                edges {
+                  node {
+                    name
+                    position
+                    year
+                  }
+                }
+              }
             }
           }
         }
       `
     }
-   }).then((result) => {
-        // Check that the user's team_id matches the winnerId of the game 
-        if (user.team_id === result.data.data.getGame.winnerId) {
-        // Add the game info to the context object, just to make sure it's working
-        context.gameInfo = result.data.data.getGame;
+   }).then((result) => {      
+      if (result.data.data.getPlayer.onTeam) {        
+        context.viewablePlayers = result.data.data.getPlayer.onTeam.players.edges;
         return callback(null, user, context);
       } else
-        return callback(new UnauthorizedError('You are not authorized to see this.'));
+        return callback(new UnauthorizedError('Please join a team to see players.'));
     }).catch(err => {
       return callback(err);
-    });
-  
+    });  
 }
 ```
 
-#### Before Logging In
+#### Before/During login
 
-Zacharias Smith is requesting access to the game data. He's on team Ravenclaw (`team_id` of 4), which matches the `winnerId` of the game. We expect him to gain access and have the `gameInfo` object added to the user context.
+Harry Potter clicks the login button to get into his dashboard. The rule will run and modify the context object based on those relationships. Just for demonstration purposes to verify it's working, we'll add his list of viewable players to the context object. We could also add specific permissions based on this information as well.
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/game-winner-user.png)
+![](images/player-teams-user-before.png)
+![](images/player-teams-context-before.png)
 
 #### After Logging In
 
-Zacharias Smith is in!
+Harry Potter is in and now has access to these teammates:
 
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/get-team-games-query-children.png)
-
-#### Denying a User
-
-Again, let's check the case that a user who *shouldn't* have access tries tries to view the game. Harry Potter, who has `team_id` 1, should not be able to access this game.
-
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/game-user-denied-before.png)
-
-![](https://raw.githubusercontent.com/hollylawly/flask-graphql-article/master/images/game-user-denied-after.png)
-
-Just as we were expecting, Harry Potter is denied access.
+![](images/player-teams-context-after.png)
 
 ## Wrap Up
 
