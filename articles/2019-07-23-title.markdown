@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Building a GraphQL API with Flask"
+title: "Authorization Series - Pt 3: Dynamic Authorization with GraphQL and Rules"
 description: "In this article we're going to build a quidditch management system using Flask and GraphQL. We'll then look at how we can use this graph-structured data to implement an attribute based authorization model and a relationship based authorization model using Auth0 rules."
 date: "2019-07-23 08:30"
 author:
