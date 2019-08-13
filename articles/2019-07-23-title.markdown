@@ -746,7 +746,7 @@ function (user, context, callback) {
 }
 ```
 
-#### Before/During login
+#### Before/During Login
 
 Harry Potter clicks the login button to get into his dashboard. The rule will run and modify the context object based on those relationships. Just for demonstration purposes to verify it's working, we'll add his list of viewable players to the context object. We could also add specific permissions based on this information as well.
 
