@@ -12,6 +12,12 @@ related:
 - 2017-11-15-an-example-of-all-possible-elements
 ---
 
+>Editor's Note: This is the third and final technical post in a 3-part series on focusing on Authorization. If you'd like two read the previous to (not mandatory to follow this article), you can find them below.
+
+[Authorization Series - Pt 1: What is Authorization?](https://auth0.com/blog/authorization-series-pt-1-what-is-authorization/)
+
+[Authorization Series - Pt 2: Securing HTTP APIs with RBAC rules](https://auth0.com/blog/authorization-series-pt-2-securing-http-apis-with-rbac-rules/) 
+
 ## TL;DR:
 
 In this article we're going to demonstrate how we can use **Flask** to build a **GraphQL API** that can create and return **flexible and meaningful data**. First we'll setup our backend using Flask and an SQLite database. Next we'll bring in GraphQL to build an API that will allow us to interact with quidditch teams, players, and games. Finally we'll demonstrate the value this graph-based database modeling can bring to our application by testing out two different **authorization models** to extend permissions to players from the Auth0 dashboard.
@@ -762,3 +768,13 @@ Harry Potter is in and now has access to these teammates:
 ## Wrap Up
 
 We've covered a lot in this post and even though it takes some work to setup, I hope you can see the value of integrating GraphQL into your application. It gives the client the power to request exactly what they want and it also can help expand the capabilities of your application's authorization flow. We can simplify this even further by [using rules](https://auth0.com/docs/rules) in Auth0's dashboard to extend permissions or assign roles based on certain attributes or relationships. Thanks for following along and be sure to leave any questions below!
+
+## Extra Resources
+
+Make sure you checkout the previous articles in our **Authorization series** below:
+
+[Authorization Series - Pt 1: What is Authorization?](https://auth0.com/blog/authorization-series-pt-1-what-is-authorization/)
+
+[Authorization Series - Pt 2: Securing HTTP APIs with RBAC rules](https://auth0.com/blog/authorization-series-pt-2-securing-http-apis-with-rbac-rules/) 
+
+Authorization Series - Pt 3: Dynamic Authorization with GraphQL and Rules -- (You are here)
