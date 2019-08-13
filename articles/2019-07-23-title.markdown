@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Authorization Series - Pt 3: Dynamic Authorization with GraphQL and Rules"
-description: "In this article we're going to build a quidditch management system using Flask and GraphQL. We'll then look at how we can use this graph-structured data to implement an attribute based authorization model and a graph based authorization model using Auth0 rules."
+description: "Build a Flask and GraphQL quidditch management system that uses Auth0 rules to implement ABAC and GBAC."
 date: "2019-07-23 08:30"
 author:
   name: "Holly Lloyd"
