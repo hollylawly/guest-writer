@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Authorization Series - Pt 3: Dynamic Authorization with GraphQL and Rules"
-description: "In this article we're going to build a quidditch management system using Flask and GraphQL. We'll then look at how we can use this graph-structured data to implement an attribute based authorization model and a relationship based authorization model using Auth0 rules."
+description: "In this article we're going to build a quidditch management system using Flask and GraphQL. We'll then look at how we can use this graph-structured data to implement an attribute based authorization model and a graph based authorization model using Auth0 rules."
 date: "2019-07-23 08:30"
 author:
   name: "Holly Lloyd"
@@ -30,15 +30,15 @@ In a typical application, you might have different "tiers" of users. Let's say y
 
 This is a great authorization model for a lot of applications, but sometimes as your application grows, you might find you're creating **more and more one-off roles and permissions**. Maybe you created a subsection of the blog that only users who have been subscribed for over a year have access to. Should you create a role specifically for that?
 
-> In our application, we're going to use our flexible GraphQL API with Auth0's rules to implement two other options for handling these more complex authorization scenarios: Attribute-based Access Control and Relationship-Based Access Control
+> In our application, we're going to use our flexible GraphQL API with Auth0's rules to implement two other options for handling these more complex authorization scenarios: Attribute-based Access Control and Graph-Based Access Control
 
 ### Attribute-based Access Control (ABAC)
 
 Attribute-based access control means we're authorizing our user to have access to something **based on a trait associated with that user**. So in the above example, instead of assigning each user who has been subscribed for over a year a special role for that, we'd just look at the `created_at` field associated with that user and allow or deny access based on that.
 
-### Relationship-based Access Control (ReBAC)
+### Graph-based Access Control (GBAC)
 
-Relationship-based access control is where we allow access to something **based on how that data relates to other data**. In the blog example, we might want to allow a guest author access to the posts section of the dashboard, but **only** let them view and edit posts that they wrote. In this case, we need to **check the relationship** between a post and the user before allowing access. Usually we'll have an `author_id` field on the post that will link back to the `id` field of a user. If that relationship exists, we can grant post editing access for that user. If not, we can simply deny them on the spot.
+Graph-based access control is where we allow access to something **based on how that data relates to other data**. In the blog example, we might want to allow a guest author access to the posts section of the dashboard, but **only** let them view and edit posts that they wrote. In this case, we need to **check the relationship** between a post and the user before allowing access. Usually we'll have an `author_id` field on the post that will link back to the `id` field of a user. If that relationship exists, we can grant post editing access for that user. If not, we can simply deny them on the spot.
 
 ![](images/graph-rebac.png)
 
@@ -613,7 +613,7 @@ This is a great use case for graph-structured data. In this scenario we basicall
 
 As mentioned at the beginning of this article, there are a few different ways we can authorize a user to have certain permissions in an application. The most widely used one is **role based access control**, which is where we have a user and we assign it roles. The roles then dictate the permissions that user has. This structure works fine for small simple applications, but a lot of larger applications make authorization decisions that rely heavily on either attributes of a user or the relationships a user has to data.
 
-Now that we've created our GraphQL API, we can use that flexible data to implement two different authorization models: **Attribute based Access Control** and **Relationship Based Access Control**.
+Now that we've created our GraphQL API, we can use that flexible data to implement two different authorization models: **Attribute-based Access Control** and **Graph-Based Access Control**.
 
 ### Creating an ABAC Rule
 
@@ -693,9 +693,9 @@ Now our user is returned and if you look at the context object, we can see a `ye
 
 This is a quick way to grant permissions dynamically. We can setup our app so that in order to access a certain year's chatroom, you must have the correct permission for that year. So if a player in her 3rd year tries to access Year 2 Chat, she will be denied. 
 
-### Creating a ReBAC Rule
+### Creating a GBAC Rule
 
-Next up, let's create our relationship based rule. 
+Next up, let's create our graph based rule. 
 
 For this scenario, let's imagine that we need to restrict view access of player's profiles based on what team they're on. 
 
